@@ -1,7 +1,7 @@
 /* 
  * Project: Midterm Room Controller
  * Desacription: Controll restroom environment 
- * Author: Elsmen Arasgon
+ * Author: Elsmen Aragon
  * Date: 4-March-2024
  * For comprehensive documentation and examples, please visit:
  * https://docs.particle.io/firmware/best-practices/firmware-template/
@@ -17,7 +17,7 @@
 #include "Adafruit_SSD1306.h"
 #include "Adafruit_BME280.h"
 #include "IoTClassroom_CNM.h"
-
+#include "IoTtimer.h"
 
 //Declare Variables
 const int OLED_RESET=-1;      //reset value
@@ -30,21 +30,21 @@ bool status;
 float tempF; //variable that will convert tempC to temp in fahrenheit
 float convertedPA; //variable that will hold the converted pressure from pascals to inches/Mercury (inHg)
 //Neopixel Variable
-const int PIXELCOUNT = 20;
-const int BRI = 50;
+const int PIXELCOUNT = 8;
+const int BRI = 36;
 //Wemo stuff
 const int wemoHeat = 2;
 const int wemoHumid = 4;
 //default room conditions
-float dTemp = 75;
-float dHumid = 25;
+float dTemp = 70.0;
+float dHumid = 35.0;
 //userButton1 conditions
-float userTemp1 = 80.0;
-float userHumid1 = 20.0;
+float userTemp1 = 75.0;
+float userHumid1 = 30.0;
 int programState;
 //userButton2 conditions
-float userTemp2 = 85;
-float userHumid2 = 15;
+float userTemp2 = 80.0;
+float userHumid2 = 25.0;
 
 //Delcare Functions
 void defaultSettings(float defaultTemp, float defaultHumidity); 
@@ -57,7 +57,7 @@ Adafruit_BME280 myReading; //Defining bme280 object mine is called myReading
 Adafruit_NeoPixel pixel(PIXELCOUNT, SPI1, WS2812B);
 Button buttonSetting1(D3);
 Button buttonSetting2(D4);
-
+IoTTimer timerB1, timerB2;
 
 // Let Device OS manage the connection to the Particle Cloud
 SYSTEM_MODE(MANUAL);
@@ -95,34 +95,32 @@ void loop() {
     pressPA = myReading.readPressure();
     convertedPA = pressPA*0.00029530;
     humidRH = myReading.readHumidity();
-    displayOled.printf("ROOM CONDITIONS\n\n Temperature = %0.3f\nHumidity = %0.3f\n", tempF,humidRH);
+    displayOled.printf("   ROOM CONDITIONS\n\nTemp = %0.2f\n R H = %0.2f\n\n", tempF,humidRH);
     displayOled.display();
     displayOled.clearDisplay();
-    //Serial.printf("state = %i\n", programState);
-
+    
     if(buttonSetting1.isClicked()){
         programState = 1;
-        //timer start
-        Serial.printf("programState = %i\n", programState);
+        timerB1.startTimer(120000);
     }
     if(buttonSetting2.isClicked()){
         programState = 2;
+        timerB2.startTimer(300000);
     }
+    Serial.printf("programState = %i\n", programState);
     switch (programState){
-        case 1: {
+        case 0: 
+            defaultSettings(dTemp, dHumid);
+            break;
+        case 1: 
             userButton1Conditions(userTemp1, userHumid1);
             break;
-            }
-        case 2: {
+        case 2: 
             userButton2Conditions(userTemp2, userHumid2);
             break;
-        }
-        default: {
-            if(tempF < dTemp || humidRH > dHumid){
-                defaultSettings(dTemp, dHumid);
-            }
+        default: 
+            programState = 0;
             break;
-        }  
     }
 }
 
@@ -139,6 +137,8 @@ void defaultSettings(float defaultTemp, float defaultHumidity){
     else{
         wemoWrite(wemoHumid, LOW);
     }
+    displayOled.printf("  D E F A U LT  ");
+    
 }
     
 void userButton1Conditions(float userTempB1, float userHumidB1){
@@ -156,6 +156,10 @@ void userButton1Conditions(float userTempB1, float userHumidB1){
     else{
         wemoWrite(wemoHumid, LOW);
     }
+    displayOled.printf(" U S E R  - 1    ");
+    if(timerB1.isTimerReady()){
+        programState = 0;
+    }
 }
 void userButton2Conditions(float userTempB2, float userHumidB2){
   if(tempF < userTemp2){
@@ -169,5 +173,9 @@ void userButton2Conditions(float userTempB2, float userHumidB2){
     }
     else{
         wemoWrite(wemoHumid, LOW);
+    }
+    displayOled.printf(" U S E R - 2    ");
+    if(timerB2.isTimerReady()){
+        programState = 0;
     }
 }
