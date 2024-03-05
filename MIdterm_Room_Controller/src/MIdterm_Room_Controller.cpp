@@ -41,16 +41,22 @@ float dHumid = 25;
 //userButton1 conditions
 float userTemp1 = 80.0;
 float userHumid1 = 20.0;
+int programState;
+//userButton2 conditions
+float userTemp2 = 85;
+float userHumid2 = 15;
 
 //Delcare Functions
 void defaultSettings(float defaultTemp, float defaultHumidity); 
-void userButton1Conditions(float userButton1Temp, float userButton1Humidity);
+void userButton1Conditions(float userTempB1, float userHumidB1);
+void userButton2Conditions(float userTempB2, float userHumidB2);
 
 // Declare Objects
 Adafruit_SSD1306 displayOled(OLED_RESET); // this is for I2C device OLED
 Adafruit_BME280 myReading; //Defining bme280 object mine is called myReading
 Adafruit_NeoPixel pixel(PIXELCOUNT, SPI1, WS2812B);
 Button buttonSetting1(D3);
+Button buttonSetting2(D4);
 
 
 // Let Device OS manage the connection to the Particle Cloud
@@ -92,10 +98,31 @@ void loop() {
     displayOled.printf("ROOM CONDITIONS\n\n Temperature = %0.3f\nHumidity = %0.3f\n", tempF,humidRH);
     displayOled.display();
     displayOled.clearDisplay();
+    //Serial.printf("state = %i\n", programState);
 
-
-    if(tempF < dTemp || humidRH > dHumid){
-       defaultSettings(dTemp, dHumid);            
+    if(buttonSetting1.isClicked()){
+        programState = 1;
+        //timer start
+        Serial.printf("programState = %i\n", programState);
+    }
+    if(buttonSetting2.isClicked()){
+        programState = 2;
+    }
+    switch (programState){
+        case 1: {
+            userButton1Conditions(userTemp1, userHumid1);
+            break;
+            }
+        case 2: {
+            userButton2Conditions(userTemp2, userHumid2);
+            break;
+        }
+        default: {
+            if(tempF < dTemp || humidRH > dHumid){
+                defaultSettings(dTemp, dHumid);
+            }
+            break;
+        }  
     }
 }
 
@@ -114,4 +141,33 @@ void defaultSettings(float defaultTemp, float defaultHumidity){
     }
 }
     
-//void userButton1Conditions(float userButton1Temp, float userButton1Humidity)
+void userButton1Conditions(float userTempB1, float userHumidB1){
+    //timer ready then do set programState back to 0
+    if(tempF < userTemp1){
+
+        wemoWrite(wemoHeat, HIGH);
+    }
+    else{
+        wemoWrite(wemoHeat, LOW);
+    }
+    if(humidRH > userHumid1){
+        wemoWrite(wemoHumid, HIGH);
+    }
+    else{
+        wemoWrite(wemoHumid, LOW);
+    }
+}
+void userButton2Conditions(float userTempB2, float userHumidB2){
+  if(tempF < userTemp2){
+        wemoWrite(wemoHeat, HIGH);
+    }
+    else{
+        wemoWrite(wemoHeat, LOW);
+    }
+    if(humidRH > userHumid2){
+        wemoWrite(wemoHumid, HIGH);
+    }
+    else{
+        wemoWrite(wemoHumid, LOW);
+    }
+}
