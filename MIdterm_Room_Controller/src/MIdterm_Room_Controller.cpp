@@ -45,11 +45,21 @@ int programState;
 //userButton2 conditions
 float userTemp2 = 80.0;
 float userHumid2 = 25.0;
+//Encoder variables
+const int PINA = D9;
+const int PINB = D8;
+const int ENCBUTTONPIN = D16;
+int encoderPosition;
+int pixelPosition;
+int positionMapped;
+bool setReadTemp;
 
 //Delcare Functions
 void defaultSettings(float defaultTemp, float defaultHumidity); 
 void userButton1Conditions(float userTempB1, float userHumidB1);
 void userButton2Conditions(float userTempB2, float userHumidB2);
+float userChangeTemp(float tempRead);
+void pixelFill(int start, int end, int color);
 
 // Declare Objects
 Adafruit_SSD1306 displayOled(OLED_RESET); // this is for I2C device OLED
@@ -57,7 +67,9 @@ Adafruit_BME280 myReading; //Defining bme280 object mine is called myReading
 Adafruit_NeoPixel pixel(PIXELCOUNT, SPI1, WS2812B);
 Button buttonSetting1(D3);
 Button buttonSetting2(D4);
-IoTTimer timerB1, timerB2;
+Button encoderSettingB3(ENCBUTTONPIN);
+IoTTimer timerB1, timerB2, timerB3;
+Encoder elsEncoder(PINB, PINA);
 
 // Let Device OS manage the connection to the Particle Cloud
 SYSTEM_MODE(MANUAL);
@@ -86,8 +98,6 @@ void setup() {
     }
     Serial.printf("\n\n");
 }
-
-
 void loop() {
     displayOled.setCursor(0,0);
     tempC = myReading.readTemperature();
@@ -95,7 +105,7 @@ void loop() {
     pressPA = myReading.readPressure();
     convertedPA = pressPA*0.00029530;
     humidRH = myReading.readHumidity();
-    displayOled.printf("   ROOM CONDITIONS\n\nTemp = %0.2f\n R H = %0.2f\n\n", tempF,humidRH);
+    displayOled.printf("   ROOM CONDITIONS\n\nTemp(F) = %0.2f\n R H(%) = %0.2f\n\n", tempF,humidRH);
     displayOled.display();
     displayOled.clearDisplay();
     
@@ -106,6 +116,11 @@ void loop() {
     if(buttonSetting2.isClicked()){
         programState = 2;
         timerB2.startTimer(300000);
+    }
+    if(encoderSettingB3.isClicked()){
+        programState = 3;
+        setReadTemp = true;
+        timerB3.startTimer(60000);
     }
     Serial.printf("programState = %i\n", programState);
     switch (programState){
@@ -118,12 +133,17 @@ void loop() {
         case 2: 
             userButton2Conditions(userTemp2, userHumid2);
             break;
+        case 3:
+            encoderPosition = elsEncoder.read();
+            //positionMapped = map(encoderPosition, 0,4,0,1);
+            userChangeTemp(tempF); //do i need pixel position returned???
+            break;
         default: 
             programState = 0;
             break;
-    }
+    }     
 }
-
+//DefaultSettings function
 void defaultSettings(float defaultTemp, float defaultHumidity){
     if(tempF<defaultTemp){
         wemoWrite(wemoHeat, HIGH);   
@@ -137,10 +157,9 @@ void defaultSettings(float defaultTemp, float defaultHumidity){
     else{
         wemoWrite(wemoHumid, LOW);
     }
-    displayOled.printf("  D E F A U LT  ");
+    displayOled.printf(" -- D E F A U L T -- ");
     
 }
-    
 void userButton1Conditions(float userTempB1, float userHumidB1){
     //timer ready then do set programState back to 0
     if(tempF < userTemp1){
@@ -156,7 +175,7 @@ void userButton1Conditions(float userTempB1, float userHumidB1){
     else{
         wemoWrite(wemoHumid, LOW);
     }
-    displayOled.printf(" U S E R  - 1    ");
+    displayOled.printf("--- U S E R  (1) ---   ");
     if(timerB1.isTimerReady()){
         programState = 0;
     }
@@ -174,8 +193,39 @@ void userButton2Conditions(float userTempB2, float userHumidB2){
     else{
         wemoWrite(wemoHumid, LOW);
     }
-    displayOled.printf(" U S E R - 2    ");
+    displayOled.printf("--- U S E R  (2) ---   ");
     if(timerB2.isTimerReady()){
         programState = 0;
     }
 }
+float userChangeTemp(float tempRead){
+    if(setReadTemp){
+       elsEncoder.write(tempRead);
+       setReadTemp = false;
+    }    
+    if(encoderPosition > 90){
+        encoderPosition = 90;
+        elsEncoder.write(encoderPosition);
+    }
+    if(encoderPosition < 40){
+        encoderPosition = 40;
+        elsEncoder.write(encoderPosition);
+    }
+    displayOled.printf("MANUAL OVERIDE\n");
+    displayOled.printf("Temp: %i\n", encoderPosition);
+    if(encoderPosition > tempRead){
+        wemoWrite(wemoHeat, HIGH);
+    }
+    else{
+        wemoWrite(wemoHeat, LOW);
+    }
+    //pixelPosition = map(encoderPosition, 40,90,0,8);
+    if(timerB3.isTimerReady()){
+        programState = 0;
+    }
+    return pixelPosition;
+}
+
+//void pixelFill(int start, int end, int color){
+
+//}
