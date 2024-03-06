@@ -53,6 +53,10 @@ int encoderPosition;
 int pixelPosition;
 int positionMapped;
 bool setReadTemp;
+//HUE variables
+const int BULB = 5;
+int color;
+int hueBrightness = 100;
 
 //Delcare Functions
 void defaultSettings(float defaultTemp, float defaultHumidity); 
@@ -219,6 +223,13 @@ float userChangeTemp(float tempRead){
     else{
         wemoWrite(wemoHeat, LOW);
     }
+    if((int)tempRead == encoderPosition){
+        setHue(BULB,true, HueRainbow[3],hueBrightness, 255);  
+    }
+    else{
+        setHue(BULB,false, HueRainbow[3],hueBrightness, 255);
+    }
+    
     //pixelPosition = map(encoderPosition, 40,90,0,8);
     if(timerB3.isTimerReady()){
         programState = 0;
