@@ -53,6 +53,7 @@ int encoderPosition;
 int pixelPosition;
 int positionMapped;
 bool setReadTemp;
+
 //HUE variables
 const int BULB = 5;
 int color;
@@ -62,7 +63,7 @@ int hueBrightness = 100;
 void defaultSettings(float defaultTemp, float defaultHumidity); 
 void userButton1Conditions(float userTempB1, float userHumidB1);
 void userButton2Conditions(float userTempB2, float userHumidB2);
-float userChangeTemp(float tempRead);
+void userChangeTemp(float tempRead);
 void pixelFill(int start, int end, int color);
 
 // Declare Objects
@@ -89,6 +90,8 @@ void setup() {
     displayOled.setTextColor(WHITE);
     displayOled.setCursor(0,0);
     pixel.begin();
+    pixel.setBrightness(BRI);
+    pixel.show();
     status = myReading.begin(HEXADDRESS);
     if (status == false) {
         Serial.printf("BME280 at address 0x%02x x failed to start ", HEXADDRESS);
@@ -139,7 +142,7 @@ void loop() {
             break;
         case 3:
             encoderPosition = elsEncoder.read();
-            //positionMapped = map(encoderPosition, 0,4,0,1);
+            //positionMapped = map(encoderPosition, 0,4,0,1); /Trying to map turns of encoder to move one position
             userChangeTemp(tempF); //do i need pixel position returned???
             break;
         default: 
@@ -202,7 +205,7 @@ void userButton2Conditions(float userTempB2, float userHumidB2){
         programState = 0;
     }
 }
-float userChangeTemp(float tempRead){
+void userChangeTemp(float tempRead){
     if(setReadTemp){
        elsEncoder.write(tempRead);
        setReadTemp = false;
@@ -229,14 +232,25 @@ float userChangeTemp(float tempRead){
     else{
         setHue(BULB,false, HueRainbow[3],hueBrightness, 255);
     }
-    
-    //pixelPosition = map(encoderPosition, 40,90,0,8);
+    //Here is my pixel fill
+    int numPixels = map(encoderPosition, 40, 90, 0, PIXELCOUNT);
+    // Light up pixels up to numPixels
+    for (int i = 0; i < PIXELCOUNT; i++) {
+        if (i < numPixels) {
+            // Set color for lit pixels
+            pixel.setPixelColor(i, pixel.Color(255, 0, 0));
+        } 
+        else {
+            // Turn off pixels beyond numPixels
+            pixel.setPixelColor(i, pixel.Color(0, 0, 0));
+        }
+    }
+    pixel.show();
+
     if(timerB3.isTimerReady()){
         programState = 0;
     }
-    return pixelPosition;
+    
 }
+    
 
-//void pixelFill(int start, int end, int color){
-
-//}
