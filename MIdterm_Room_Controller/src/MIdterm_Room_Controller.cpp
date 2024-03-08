@@ -233,11 +233,12 @@ void userChangeTemp(float tempRead){
         setHue(BULB,false, HueRainbow[3],hueBrightness, 255);
     }
     //Here is my pixel fill
-    int numPixels = map(encoderPosition, 40, 90, 0, PIXELCOUNT);
+    int numPixels = map(encoderPosition, (int)tempRead, 90, 0, PIXELCOUNT);
     // Light up pixels up to numPixels
     for (int i = 0; i < PIXELCOUNT; i++) {
-        if (i < numPixels) {
+       // if (i < numPixels) {
             // Set color for lit pixels
+        if(i>=(PIXELCOUNT-numPixels)){
             pixel.setPixelColor(i, pixel.Color(255, 0, 0));
         } 
         else {
